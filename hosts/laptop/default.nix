@@ -86,6 +86,8 @@
     nvidiaBusId = "PCI:1:0:0";
   };
 
+  graphics.nvidia.prime.offload.enable = true;
+
   # Virtualization stuff.
   podman.enable = true;
   vm.enable = true;

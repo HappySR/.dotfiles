@@ -4,6 +4,10 @@
     lfs.enable = true;
     userName = "Subhajit Roy";
     userEmail = "darrang48@gmail.com";
+    signing = {
+      key = "2FE279D928DDD672";
+      signByDefault = true;
+    };
     extraConfig = {
       init.defaultBranch = "main";
       url = {

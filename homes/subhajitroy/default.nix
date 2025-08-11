@@ -4,7 +4,7 @@
   # General home stuff.
   home.username = "subhajitroy";
   home.homeDirectory = "/home/subhajitroy";
-  home.stateVersion = "25.05"; #DO NOT CHANGE!
+  home.stateVersion = "25.05"; # DO NOT CHANGE!
   home.packages = [
     # themes and icons
     (pkgs.catppuccin-kde.override {
@@ -23,10 +23,12 @@
       removeWarningPopup = true;
     })
     pkgs.fd
+    pkgs.ferium
     pkgs.ffmpeg
     pkgs.flutter
     pkgs.foliate
     pkgs.fish-lsp
+    pkgs.google-chrome
     pkgs.inotify-tools
     pkgs.jq
     pkgs.just
@@ -44,6 +46,9 @@
     pkgs.nixfmt-rfc-style
     pkgs.nix-output-monitor
     pkgs.obsidian
+    (pkgs.prismlauncher.override {
+      jdks = [ pkgs.jdk21 ];
+    })
     pkgs.pika-backup
     pkgs.podman-compose
     pkgs.quickemu
@@ -57,6 +62,7 @@
     pkgs.typstyle
     pkgs.unzip
     pkgs.unrar
+    pkgs.vscode
     pkgs.vscode-langservers-extracted
     pkgs.wl-clipboard
     pkgs.youtube-music

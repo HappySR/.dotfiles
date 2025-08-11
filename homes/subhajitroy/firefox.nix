@@ -75,7 +75,7 @@
           definedAliases = [ "@sr" ];
         };
       };
-      search.default = "SearXNG";
+      search.default = "google";
       search.force = true;
       extensions.packages = with pkgs.nur.repos.rycee.firefox-addons; [
         canvasblocker
