@@ -14,7 +14,6 @@
     })
     pkgs.bibata-cursors
     # programs
-    pkgs.aseprite
     pkgs.android-studio
     pkgs.codebook
     pkgs.deno
@@ -25,7 +24,7 @@
     pkgs.fd
     pkgs.ferium
     pkgs.ffmpeg
-    pkgs.flutter
+    pkgs.flutter332
     pkgs.foliate
     pkgs.fish-lsp
     pkgs.google-chrome
@@ -51,6 +50,8 @@
     })
     pkgs.pika-backup
     pkgs.podman-compose
+    pkgs.python314
+    pkgs.python314Packages.pandas
     pkgs.quickemu
     pkgs.ripgrep
     pkgs.ryubing

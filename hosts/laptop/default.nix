@@ -30,7 +30,7 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   boot.extraModprobeConfig = "options kvm_intel nested=1";
-  boot.kernelPackages = pkgs.linuxPackages_latest;
+  boot.kernelPackages = pkgs.linuxPackages_6_15;
 
   # Zram stuff.
   zramSwap.enable = true;
@@ -93,6 +93,8 @@
   vm.enable = true;
   vm.kvm.enable = true;
   # vm.waydroid.enable = true;
+  virtualisation.vmware.host.enable = true;
+  virtualisation.vmware.guest.enable = true;
 
   # Sunshine (and Moonlight) stuff.
   sunshine.enable = true;
