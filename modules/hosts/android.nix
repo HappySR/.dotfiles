@@ -10,8 +10,5 @@
 
   config = lib.mkIf config.android.enable {
     programs.adb.enable = true;
-    services.udev.packages = [
-      pkgs.android-udev-rules
-    ];
   };
 }

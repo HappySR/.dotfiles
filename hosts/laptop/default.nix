@@ -30,7 +30,7 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   boot.extraModprobeConfig = "options kvm_intel nested=1";
-  boot.kernelPackages = pkgs.linuxPackages_6_15;
+  boot.kernelPackages = pkgs.linuxPackages_latest;
 
   # Zram stuff.
   zramSwap.enable = true;
@@ -78,6 +78,11 @@
   services.displayManager.ly.enable = true;
 
   # Graphics stuff.
+  hardware.graphics = {
+    enable = true;
+    enable32Bit = true; # CRITICAL: Steam will not work without this
+  };
+
   graphics.enable = true;
   graphics.nvidia.enable = true;
   graphics.nvidia.prime.enable = true;
@@ -92,15 +97,17 @@
   podman.enable = true;
   vm.enable = true;
   vm.kvm.enable = true;
-  # vm.waydroid.enable = true;
-  virtualisation.vmware.host.enable = true;
-  virtualisation.vmware.guest.enable = true;
+  vm.waydroid.enable = true;
 
   # Sunshine (and Moonlight) stuff.
   sunshine.enable = true;
 
   # Flatpak stuff.
   services.flatpak.enable = true;
+
+  # WireShark stuff.
+  programs.wireshark.enable = true;
+  programs.wireshark.package = pkgs.wireshark;
 
   # AppImage stuff.
   programs.appimage.enable = true;
@@ -111,6 +118,15 @@
       pkgs.icu
     ];
   };
+
+  # Steam
+  programs.steam = {
+    enable = true;
+    remotePlay.openFirewall = true;
+    dedicatedServer.openFirewall = true;
+  };
+
+  programs.gamemode.enable = true;
 
   # Nix-ld.
   programs.nix-ld.enable = true;
@@ -133,6 +149,7 @@
       "libvirtd"
       "kvm"
       "adbusers"
+      "wireshark"
     ];
   };
 

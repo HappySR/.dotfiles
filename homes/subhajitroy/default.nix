@@ -12,6 +12,31 @@
       accents = [ "mauve" ];
       winDecStyles = [ "classic" ];
     })
+
+    # Youtube Music (!HardwareMediaKeyHandling)
+    (pkgs.runCommand "pear-desktop-fixed"
+      {
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        # Since we are using pkgs.pear-desktop directly and not a 'src',
+        # we tell Nix not to look for a source folder to unpack.
+        dontUnpack = true;
+      }
+      ''
+        mkdir -p $out/bin
+
+        # Wrap the binary with the hardware media key flag
+        makeWrapper ${pkgs.pear-desktop}/bin/pear-desktop $out/bin/pear-desktop \
+          --add-flags "--disable-features=HardwareMediaKeyHandling"
+
+        # Copy the desktop files and icons
+        cp -r ${pkgs.pear-desktop}/share $out/share
+        chmod -R +w $out/share
+
+        # Fix the Exec path in all desktop files to point to our new wrapped binary
+        find $out/share/applications -name "*.desktop" -exec sed -i "s|Exec=pear-desktop|Exec=$out/bin/pear-desktop|g" {} +
+      ''
+    )
+    pkgs.sunshine
     pkgs.bibata-cursors
     # programs
     pkgs.android-studio
@@ -24,9 +49,10 @@
     pkgs.fd
     pkgs.ferium
     pkgs.ffmpeg
-    pkgs.flutter332
+    pkgs.flutter335
     pkgs.foliate
     pkgs.fish-lsp
+    pkgs.gcc
     pkgs.google-chrome
     pkgs.inotify-tools
     pkgs.jq
@@ -36,8 +62,10 @@
     pkgs.kdePackages.kde-gtk-config
     pkgs.legcord
     pkgs.libreoffice-qt-fresh
+    pkgs.mongodb
     pkgs.mpv
     pkgs.markdown-oxide
+    pkgs.nodejs
     pkgs.nvd
     pkgs.nixd
     pkgs.nix-alien
@@ -49,12 +77,13 @@
       jdks = [ pkgs.jdk21 ];
     })
     pkgs.pika-backup
+    pkgs.pnpm
     pkgs.podman-compose
-    pkgs.python314
-    pkgs.python314Packages.pandas
+    pkgs.python313
+    pkgs.python313Packages.pip
+    pkgs.python313Packages.pandas
     pkgs.quickemu
     pkgs.ripgrep
-    pkgs.ryubing
     pkgs.ripgrep-all
     pkgs.simple-completion-language-server
     pkgs.taplo
@@ -66,10 +95,8 @@
     pkgs.vscode
     pkgs.vscode-langservers-extracted
     pkgs.wl-clipboard
-    pkgs.youtube-music
     pkgs.yaml-language-server
     pkgs.zathura
-    pkgs.zed-editor-fhs
     # fonts
     pkgs.maple-mono.NF
   ];
