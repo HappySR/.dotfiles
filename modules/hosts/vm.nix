@@ -32,7 +32,17 @@
     })
 
     (lib.mkIf (config.vm.enable && config.vm.waydroid.enable) {
-      virtualisation.waydroid.enable = true;
+      virtualisation.waydroid = {
+        enable = true;
+        package = pkgs.waydroid-nftables;
+      };
+
+      networking.firewall.trustedInterfaces = [ "waydroid0" ];
+
+      # environment.systempackages = [
+      #   pkgs.waydroid-script
+      #   pkgs.waydroid-choose-gpu
+      # ];
     })
   ];
 }

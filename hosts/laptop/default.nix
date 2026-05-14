@@ -159,4 +159,24 @@
     ZED_WINDOW_DECORATIONS = "server";
     SIGNAL_PASSWORD_STORE = "kwallet6";
   };
+
+  environment.systemPackages = with pkgs; [
+    (pkgs.runCommand "pear-desktop-fixed"
+      {
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        dontUnpack = true;
+      }
+      ''
+        mkdir -p $out/bin
+        makeWrapper ${pkgs.pear-desktop}/bin/pear-desktop $out/bin/pear-desktop \
+          --add-flags "--disable-features=HardwareMediaKeyHandling"
+        cp -r ${pkgs.pear-desktop}/share $out/share
+        chmod -R +w $out/share
+        find $out/share/applications -name "*.desktop" -exec sed -i "s|Exec=pear-desktop|Exec=$out/bin/pear-desktop|g" {} +
+      ''
+    )
+  ];
+
+  # Also add this line here to fix the Nvidia service crash
+  hardware.nvidia-container-toolkit.enable = pkgs.lib.mkForce false;
 }
