@@ -1,0 +1,26 @@
+[config]
+mode = "dark"
+
+[templates.ghostty]
+input_path = "~/.config/matugen/templates/ghostty/dankcolors"
+output_path = "~/.config/ghostty/themes/dankcolors"
+
+[templates.helix]
+input_path = "~/.config/matugen/templates/helix/dankcolors.toml"
+output_path = "~/.config/helix/themes/dankcolors.toml"
+
+[templates.zellij]
+input_path = "~/.config/matugen/templates/zellij/dankcolors.kdl"
+output_path = "~/.config/zellij/themes/dankcolors.kdl"
+
+[templates.yazi]
+input_path = "~/.config/matugen/templates/yazi/dankcolors.toml"
+output_path = "~/.config/yazi/theme.toml"
+
+[templates.vesktop]
+input_path = "~/.config/matugen/templates/vesktop/dankcolors.css"
+output_path = "~/.config/vesktop/themes/dankcolors.css"
+
+[templates.kdeglobals]
+input_path = "~/.config/matugen/templates/kdeglobals/dankcolors"
+output_path = "~/.config/kdeglobals"

@@ -43,9 +43,6 @@
     pkgs.codebook
     pkgs.deno
     pkgs.distrobox
-    (pkgs.bottles.override {
-      removeWarningPopup = true;
-    })
     pkgs.fd
     pkgs.ferium
     pkgs.ffmpeg
@@ -62,9 +59,9 @@
     pkgs.kdePackages.kde-gtk-config
     pkgs.legcord
     pkgs.libreoffice-qt-fresh
+    pkgs.markdown-oxide
     pkgs.mongodb
     pkgs.mpv
-    pkgs.markdown-oxide
     pkgs.nodejs
     pkgs.nvd
     pkgs.nixd
@@ -129,6 +126,7 @@
     ./jujutsu.nix
     ./kdeconnect.nix
     ./firefox.nix
+    ./matugen.nix
     ./niri.nix
     ./nushell.nix
     ./obs-studio.nix
