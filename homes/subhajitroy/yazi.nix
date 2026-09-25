@@ -3,6 +3,7 @@
 {
   programs.yazi = {
     enable = true;
+    shellWrapperName = "yy";
     enableFishIntegration = true;
     enableNushellIntegration = true;
     plugins = {
@@ -23,26 +24,36 @@
           {
             name = "*.md";
             run = "piper -- CLICOLOR_FORCE=1 ${pkgs.glow}/bin/glow -w=$w -s=dark \"$1\"";
+            group = "md";
+            url = "*.md";
           }
           {
             name = "*.tar*";
             run = "piper --format=url -- tar tf \"$1\"";
+            group = "tar";
+            url = "*.tar";
           }
           {
             name = "*/";
             run = "piper -- eza -TL=3 --color=always --icons=always --group-directories-first --no-quotes \"$1\"";
+            group = "*/";
+            url = "*/";
           }
         ];
         prepend_fetchers = [
           {
             id = "git";
             name = "*";
+            url = "*";
             run = "git";
+            group = "git";
           }
           {
             id = "git";
             name = "*/";
+            url = "*/";
             run = "git";
+            group = "git";
           }
         ];
         preview = {

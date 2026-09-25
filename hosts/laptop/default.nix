@@ -12,7 +12,6 @@
     ../../modules/hosts/graphics.nix
     ../../modules/hosts/podman.nix
     ../../modules/hosts/vm.nix
-    ../../modules/hosts/sunshine.nix
     ../../modules/hosts/android.nix
   ];
 
@@ -99,15 +98,8 @@
   vm.kvm.enable = true;
   vm.waydroid.enable = true;
 
-  # Sunshine (and Moonlight) stuff.
-  sunshine.enable = true;
-
   # Flatpak stuff.
   services.flatpak.enable = true;
-
-  # WireShark stuff.
-  programs.wireshark.enable = true;
-  programs.wireshark.package = pkgs.wireshark;
 
   # AppImage stuff.
   programs.appimage.enable = true;
@@ -149,7 +141,6 @@
       "libvirtd"
       "kvm"
       "adbusers"
-      "wireshark"
     ];
   };
 

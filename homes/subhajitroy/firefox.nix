@@ -3,6 +3,7 @@
 {
   programs.firefox = {
     enable = true;
+    configPath = ".mozilla/firefox";
     profiles.default = {
       isDefault = true;
       search.engines = {
@@ -86,7 +87,7 @@
         foxyproxy-standard
         return-youtube-dislikes
         sponsorblock
-        tabliss
+        tablissng
         ublock-origin
         user-agent-string-switcher
         violentmonkey
