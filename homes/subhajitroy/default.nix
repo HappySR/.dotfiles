@@ -50,7 +50,7 @@
     pkgs.kdePackages.karousel
     pkgs.kdePackages.kde-gtk-config
     pkgs.legcord
-    pkgs.libreoffice-qt-fresh
+    pkgs.libreoffice-qt
     pkgs.markdown-oxide
     pkgs.mpv
     pkgs.nvd
@@ -107,6 +107,7 @@
     ./niri.nix
     ./nushell.nix
     ./obs-studio.nix
+    ./predator-control.nix
     ./starship.nix
     ./yazi.nix
     ./zoxide.nix

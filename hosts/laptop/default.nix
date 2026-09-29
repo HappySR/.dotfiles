@@ -13,6 +13,7 @@
     ../../modules/hosts/podman.nix
     ../../modules/hosts/vm.nix
     ../../modules/hosts/android.nix
+    ../../modules/hosts/linuwu-sense.nix
   ];
 
   # Some stuff that should exist independently.
@@ -100,6 +101,9 @@
 
   # Flatpak stuff.
   services.flatpak.enable = true;
+
+  # Linuwu stuff.
+  linuwu-sense.enable = true;
 
   # AppImage stuff.
   programs.appimage.enable = true;
