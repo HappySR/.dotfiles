@@ -1,11 +1,14 @@
 { pkgs, ... }:
 
 let
-  pythonEnv = pkgs.python3.withPackages (ps: [ ps.pygobject3 ]);
+  pythonEnv = pkgs.python3.withPackages (ps: [
+    ps.pygobject3
+    ps.pycairo
+  ]);
 
   predator-control = pkgs.stdenv.mkDerivation {
     pname = "predator-control";
-    version = "0.1.0";
+    version = "0.2.0";
     dontUnpack = true;
 
     nativeBuildInputs = [
@@ -16,13 +19,13 @@ let
     buildInputs = [ pkgs.gtk4 ];
 
     installPhase = ''
-        mkdir -p $out/share/predator-control $out/bin $out/share/applications
-        install -m644 ${./predator-control.py} $out/share/predator-control/predator-control.py
+            mkdir -p $out/share/predator-control $out/bin $out/share/applications
+            install -m644 ${./predator-control.py} $out/share/predator-control/predator-control.py
 
-        makeWrapper ${pythonEnv}/bin/python3 $out/bin/predator-control \
-          --add-flags "$out/share/predator-control/predator-control.py"
+            makeWrapper ${pythonEnv}/bin/python3 $out/bin/predator-control \
+              --add-flags "$out/share/predator-control/predator-control.py"
 
-        cat > $out/share/applications/predator-control.desktop <<EOF
+            cat > $out/share/applications/predator-control.desktop <<EOF
       [Desktop Entry]
       Type=Application
       Name=Predator Control
@@ -37,9 +40,6 @@ in
 {
   home.packages = [ predator-control ];
 
-  # Reapply your last saved keyboard/fan state once niri starts.
-  # The system-level off-at-boot service still keeps the keyboard dark
-  # before login; this restores whatever you last set afterward.
   xdg.configFile."autostart/predator-control-apply.desktop".text = ''
     [Desktop Entry]
     Type=Application

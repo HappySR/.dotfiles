@@ -44,14 +44,79 @@ let
   };
 
   kbPath = "/sys/module/linuwu_sense/drivers/platform:acer-wmi/acer-wmi/four_zoned_kb";
+  psPath = "/sys/module/linuwu_sense/drivers/platform:acer-wmi/acer-wmi/predator_sense";
+  stateFile = "/home/subhajitroy/.config/linuwu-sense-gui/state.json";
 
-  kb-wave-on = pkgs.writeShellScriptBin "kb-wave-on" ''
-    echo "3,5,100,2,0,150,255" | sudo tee ${kbPath}/four_zone_mode
-  '';
+  # Reads the GUI's saved JSON and reapplies it at boot, before login.
+  # Needs no GTK -- json is stdlib.
+  linuwu-sense-apply =
+    pkgs.writers.writePython3 "linuwu-sense-apply"
+      {
+        # Skip style-only checks (line length, blank lines); the script itself is fine.
+        flakeIgnore = [
+          "E501"
+          "E302"
+          "E305"
+        ];
+      }
+      ''
+        import json
 
-  kb-off = pkgs.writeShellScriptBin "kb-off" ''
-    echo "0,0,0,1,0,0,0" | sudo tee ${kbPath}/four_zone_mode
-  '';
+        KB = "${kbPath}"
+        PS = "${psPath}"
+        STATE = "${stateFile}"
+
+
+        def write(path, value):
+            with open(path, "w") as f:
+                f.write(value)
+
+
+        def main():
+            try:
+                with open(STATE) as f:
+                    state = json.load(f)
+            except Exception:
+                state = {}
+
+            try:
+                if not state.get("kb_on", False):
+                    write(f"{KB}/four_zone_mode", "0,0,0,1,0,0,0")
+                elif state.get("active_mode") == "zone":
+                    z = state.get("zone", {})
+                    colors = z.get(
+                        "colors", ["ff0000", "00ff00", "0000ff", "ffffff"])
+                    brightness = z.get("brightness", 100)
+                    write(f"{KB}/per_zone_mode",
+                          ",".join(colors) + "," + str(brightness))
+                else:
+                    e = state.get("effect", {})
+                    r, g, b = e.get("color", [0, 150, 255])
+                    vals = [e.get("mode", 3), e.get("speed", 5),
+                            e.get("brightness", 100), e.get("direction", 1),
+                            r, g, b]
+                    write(f"{KB}/four_zone_mode",
+                          ",".join(str(v) for v in vals))
+            except Exception:
+                pass
+
+            try:
+                write(f"{PS}/backlight_timeout",
+                      str(state.get("backlight_timeout", 0)))
+            except Exception:
+                pass
+
+            try:
+                cpu = state.get("cpu_fan", 0)
+                gpu = state.get("gpu_fan", 0)
+                write(f"{PS}/fan_speed", f"{cpu},{gpu}")
+            except Exception:
+                pass
+
+
+        if __name__ == "__main__":
+            main()
+      '';
 in
 {
   options.linuwu-sense.enable = lib.mkEnableOption "Linuwu-Sense (Acer Predator/Nitro RGB keyboard and platform module)";
@@ -67,27 +132,20 @@ in
     systemd.tmpfiles.rules = [
       "f ${kbPath}/four_zone_mode 0660 root linuwu_sense - -"
       "f ${kbPath}/per_zone_mode 0660 root linuwu_sense - -"
-      "f /sys/module/linuwu_sense/drivers/platform:acer-wmi/acer-wmi/predator_sense/fan_speed 0660 root linuwu_sense - -"
-      "f /sys/module/linuwu_sense/drivers/platform:acer-wmi/acer-wmi/predator_sense/usb_charging 0660 root linuwu_sense - -"
-      "f /sys/module/linuwu_sense/drivers/platform:acer-wmi/acer-wmi/predator_sense/battery_limiter 0660 root linuwu_sense - -"
+      "f ${psPath}/fan_speed 0660 root linuwu_sense - -"
+      "f ${psPath}/usb_charging 0660 root linuwu_sense - -"
+      "f ${psPath}/battery_limiter 0660 root linuwu_sense - -"
+      "f ${psPath}/backlight_timeout 0660 root linuwu_sense - -"
     ];
 
-    # Lights off at every boot, before any login.
-    systemd.services.linuwu-sense-off = {
-      description = "Turn off Predator keyboard RGB at boot";
+    systemd.services.linuwu-sense-apply-boot = {
+      description = "Apply saved Predator RGB/fan/timeout state at boot";
       wantedBy = [ "multi-user.target" ];
       after = [ "systemd-modules-load.service" ];
       serviceConfig = {
         Type = "oneshot";
-        ExecStart = "${pkgs.coreutils}/bin/tee ${kbPath}/four_zone_mode";
-        StandardInput = "data";
-        StandardInputText = "0,0,0,1,0,0,0";
+        ExecStart = "${linuwu-sense-apply}";
       };
     };
-
-    environment.systemPackages = [
-      kb-wave-on
-      kb-off
-    ];
   };
 }
