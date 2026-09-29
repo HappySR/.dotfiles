@@ -17,10 +17,10 @@ PRESETS = ["ff0000", "ff7f00", "ffff00", "00ff00", "00ffff",
 
 DEFAULT_STATE = {
     "kb_on": False,
-    "active_mode": "effect",           # "effect" or "zone" -- independent of each other
+    "active_mode": "effect",
     "effect": {"mode": 3, "speed": 5, "brightness": 100, "direction": 1, "color": [0, 150, 255]},
     "zone": {"colors": ["ff0000", "00ff00", "0000ff", "ffffff"], "brightness": 100},
-    "backlight_timeout": 0,            # 0 = never, 1 = auto-off after fixed 30s idle
+    "backlight_timeout": 0,
     "cpu_fan": 0,
     "gpu_fan": 0,
 }
@@ -28,7 +28,7 @@ DEFAULT_STATE = {
 
 def load_state():
     try:
-        merged = json.loads(json.dumps(DEFAULT_STATE))  # deep copy
+        merged = json.loads(json.dumps(DEFAULT_STATE))
         loaded = json.loads(STATE_FILE.read_text())
         merged["effect"].update(loaded.get("effect", {}))
         merged["zone"].update(loaded.get("zone", {}))
@@ -56,21 +56,22 @@ def read(path, default=""):
     except Exception:
         return default
 
-
 def apply_keyboard(state):
-    """Only one of effect/zone is ever physically shown; kb_on gates both."""
     if not state["kb_on"]:
         write(f"{KB}/four_zone_mode", "0,0,0,1,0,0,0")
         return
     if state["active_mode"] == "zone":
         z = state["zone"]
         write(f"{KB}/per_zone_mode", f"{','.join(z['colors'])},{z['brightness']}")
+        return
+    e = state["effect"]
+    r, g, b = e["color"]
+    if e["mode"] == 0:  # Static: one color on all four zones via per_zone_mode
+        hx = "%02x%02x%02x" % (r, g, b)
+        write(f"{KB}/per_zone_mode", f"{hx},{hx},{hx},{hx},{e['brightness']}")
     else:
-        e = state["effect"]
-        r, g, b = e["color"]
         write(f"{KB}/four_zone_mode",
               f"{e['mode']},{e['speed']},{e['brightness']},{e['direction']},{r},{g},{b}")
-
 
 def apply_backlight_timeout(state):
     write(f"{PS}/backlight_timeout", str(state["backlight_timeout"]))
@@ -82,16 +83,35 @@ def apply_fans(state):
 
 def apply_all(state):
     apply_keyboard(state)
-    apply_backlight_timeout(state)
-    apply_fans(state)
+    try:
+        apply_backlight_timeout(state)
+    except Exception:
+        pass
+    try:
+        apply_fans(state)
+    except Exception:
+        pass
 
 
-# ---------- color wheel widget (OpenRGB-style hue/saturation wheel) ----------
+def set_solid_bg(widget, name, hexcol, extra=""):
+    """Force a flat background color onto a widget, bypassing theme gradients."""
+    widget.set_name(name)
+    provider = getattr(widget, "_bg_provider", None)
+    if provider is None:
+        provider = Gtk.CssProvider()
+        widget._bg_provider = provider
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+    provider.load_from_data(
+        f"#{name} {{ background-image: none; background-color: #{hexcol}; "
+        f"box-shadow: none; border: 1px solid alpha(#000000, 0.25); {extra} }}".encode()
+    )
+
 
 class ColorWheel(Gtk.Box):
     def __init__(self, rgb=(0, 150, 255)):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        self.on_change = None  # callback(r, g, b), called on every edit
+        self.on_change = None
         self.h, self.s, self.v = self._rgb_to_hsv(rgb)
 
         self.area = Gtk.DrawingArea()
@@ -104,10 +124,8 @@ class ColorWheel(Gtk.Box):
         self.area.add_controller(click)
 
         drag = Gtk.GestureDrag()
-        drag.connect("drag-begin", lambda g, x, y: self._pick(x, y))
         drag.connect("drag-update", self._on_drag_update)
         self.area.add_controller(drag)
-        self._drag_gesture = drag
 
         self.append(self.area)
 
@@ -117,14 +135,10 @@ class ColorWheel(Gtk.Box):
         self.append(self.value_scale)
 
         preset_row = Gtk.Box(spacing=6)
-        for hexcol in PRESETS:
+        for i, hexcol in enumerate(PRESETS):
             btn = Gtk.Button()
-            btn.set_size_request(22, 22)
-            css = Gtk.CssProvider()
-            css.load_from_data(
-                f"button {{ background-color: #{hexcol}; min-width:22px; min-height:22px; padding:0; border-radius:4px; }}".encode()
-            )
-            btn.get_style_context().add_provider(css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+            btn.set_size_request(24, 24)
+            set_solid_bg(btn, f"preset-{id(self)}-{i}", hexcol, "border-radius: 5px; min-width:24px; min-height:24px; padding:0;")
             btn.connect("clicked", lambda b, h=hexcol: self._set_hex_and_emit(h))
             preset_row.append(btn)
         self.append(preset_row)
@@ -219,13 +233,12 @@ class ColorWheel(Gtk.Box):
                 pass
 
 
-# ---------------------------- main window ----------------------------
-
 class Window(Gtk.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app, title="Predator Control")
         self.set_default_size(460, 640)
         self.state = load_state()
+        self._ready = False  # guard against auto-apply firing while widgets are being built
 
         header = Gtk.HeaderBar()
         self.set_titlebar(header)
@@ -236,15 +249,13 @@ class Window(Gtk.ApplicationWindow):
         stack.add_titled(self.build_keyboard_page(), "keyboard", "Keyboard")
         stack.add_titled(self.build_fan_page(), "fans", "Fans")
         self.set_child(stack)
-
-    # ---- Keyboard page ----
+        self._ready = True
 
     def build_keyboard_page(self):
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
         for m in ("margin_top", "margin_bottom", "margin_start", "margin_end"):
             getattr(outer, f"set_{m}")(18)
 
-        # Master on/off -- independent of which config (effect/zone) is stored.
         row = Gtk.Box(spacing=8)
         row.append(Gtk.Label(label="Backlight", xalign=0, hexpand=True))
         self.kb_switch = Gtk.Switch(active=self.state["kb_on"])
@@ -267,11 +278,10 @@ class Window(Gtk.ApplicationWindow):
         self.timeout_dropdown.connect("notify::selected", self.on_timeout_changed)
         outer.append(self.timeout_dropdown)
         note = Gtk.Label(
-            label="The driver only supports a fixed 30-second idle timeout; there's no way to set a custom duration.",
+            label="The driver only supports a fixed 30-second idle timeout; there's no custom duration.",
             wrap=True)
         note.add_css_class("dim-label")
         outer.append(note)
-
         return outer
 
     def build_effect_tab(self):
@@ -281,16 +291,19 @@ class Window(Gtk.ApplicationWindow):
         box.append(Gtk.Label(label="Mode", xalign=0))
         self.mode_dropdown = Gtk.DropDown.new_from_strings(MODES)
         self.mode_dropdown.set_selected(self.state["effect"]["mode"])
+        self.mode_dropdown.connect("notify::selected", self.on_effect_changed)
         box.append(self.mode_dropdown)
 
         box.append(Gtk.Label(label="Speed", xalign=0))
         self.speed_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 9, 1)
         self.speed_scale.set_value(self.state["effect"]["speed"])
+        self.speed_scale.connect("value-changed", self.on_effect_changed)
         box.append(self.speed_scale)
 
         box.append(Gtk.Label(label="Brightness", xalign=0))
         self.effect_bright_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1)
         self.effect_bright_scale.set_value(self.state["effect"]["brightness"])
+        self.effect_bright_scale.connect("value-changed", self.on_effect_changed)
         box.append(self.effect_bright_scale)
 
         dir_row = Gtk.Box(spacing=8)
@@ -298,19 +311,14 @@ class Window(Gtk.ApplicationWindow):
         self.dir_toggle = Gtk.ToggleButton(
             label="Left → Right" if self.state["effect"]["direction"] == 2 else "Right → Left")
         self.dir_toggle.set_active(self.state["effect"]["direction"] == 2)
-        self.dir_toggle.connect("toggled", lambda b: b.set_label(
-            "Left → Right" if b.get_active() else "Right → Left"))
+        self.dir_toggle.connect("toggled", self.on_direction_toggled)
         dir_row.append(self.dir_toggle)
         box.append(dir_row)
 
         box.append(Gtk.Label(label="Color", xalign=0))
         self.effect_wheel = ColorWheel(tuple(self.state["effect"]["color"]))
+        self.effect_wheel.on_change = self.on_effect_color_changed
         box.append(self.effect_wheel)
-
-        apply_btn = Gtk.Button(label="Apply effect")
-        apply_btn.add_css_class("suggested-action")
-        apply_btn.connect("clicked", self.on_apply_effect)
-        box.append(apply_btn)
         return box
 
     def build_zone_tab(self):
@@ -324,53 +332,40 @@ class Window(Gtk.ApplicationWindow):
         for i in range(4):
             btn = Gtk.Button(label=f"Zone {i + 1}")
             btn.set_size_request(70, 36)
-            self._style_swatch(btn, self.state["zone"]["colors"][i])
+            set_solid_bg(btn, f"zone-swatch-{i}", self.state["zone"]["colors"][i], "border-radius: 6px;")
             btn.connect("clicked", lambda b, idx=i: self.on_select_zone(idx))
             swatch_row.append(btn)
             self.zone_swatches.append(btn)
         box.append(swatch_row)
 
         self.zone_wheel = ColorWheel(self._hex_to_rgb(self.state["zone"]["colors"][0]))
-        self.zone_wheel.on_change = self.on_zone_color_change
+        self.zone_wheel.on_change = self.on_zone_color_changed
         box.append(self.zone_wheel)
 
         box.append(Gtk.Label(label="Overall zone brightness", xalign=0))
         self.zone_bright_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1)
         self.zone_bright_scale.set_value(self.state["zone"]["brightness"])
+        self.zone_bright_scale.connect("value-changed", self.on_zone_brightness_changed)
         box.append(self.zone_bright_scale)
-
-        apply_btn = Gtk.Button(label="Apply per-zone colors")
-        apply_btn.add_css_class("suggested-action")
-        apply_btn.connect("clicked", self.on_apply_zone)
-        box.append(apply_btn)
         return box
 
     @staticmethod
     def _hex_to_rgb(h):
         return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
 
-    @staticmethod
-    def _style_swatch(btn, hexcol):
-        css = Gtk.CssProvider()
-        css.load_from_data(f"button {{ background-color: #{hexcol}; }}".encode())
-        btn.get_style_context().add_provider(css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-
     def on_select_zone(self, idx):
         self.zone_selected = idx
         self.zone_wheel.set_rgb(self._hex_to_rgb(self.state["zone"]["colors"][idx]))
-
-    def on_zone_color_change(self, r, g, b):
-        hexcol = "%02x%02x%02x" % (r, g, b)
-        self.state["zone"]["colors"][self.zone_selected] = hexcol
-        self._style_swatch(self.zone_swatches[self.zone_selected], hexcol)
 
     def on_master_toggle(self, switch, active):
         self.state["kb_on"] = active
         apply_keyboard(self.state)
         save_state(self.state)
-        return False  # let the switch visually update
+        return False
 
-    def on_apply_effect(self, _btn):
+    def _commit_effect(self):
+        if not self._ready:
+            return
         r, g, b = self.effect_wheel.get_rgb()
         self.state["effect"] = {
             "mode": self.mode_dropdown.get_selected(),
@@ -385,8 +380,33 @@ class Window(Gtk.ApplicationWindow):
         apply_keyboard(self.state)
         save_state(self.state)
 
-    def on_apply_zone(self, _btn):
-        self.state["zone"]["brightness"] = int(self.zone_bright_scale.get_value())
+    def on_effect_changed(self, *_args):
+        self._commit_effect()
+
+    def on_direction_toggled(self, btn):
+        btn.set_label("Left → Right" if btn.get_active() else "Right → Left")
+        self._commit_effect()
+
+    def on_effect_color_changed(self, r, g, b):
+        self._commit_effect()
+
+    def on_zone_color_changed(self, r, g, b):
+        if not self._ready:
+            return
+        hexcol = "%02x%02x%02x" % (r, g, b)
+        self.state["zone"]["colors"][self.zone_selected] = hexcol
+        set_solid_bg(self.zone_swatches[self.zone_selected], f"zone-swatch-{self.zone_selected}",
+                     hexcol, "border-radius: 6px;")
+        self.state["active_mode"] = "zone"
+        self.state["kb_on"] = True
+        self.kb_switch.set_active(True)
+        apply_keyboard(self.state)
+        save_state(self.state)
+
+    def on_zone_brightness_changed(self, scale):
+        if not self._ready:
+            return
+        self.state["zone"]["brightness"] = int(scale.get_value())
         self.state["active_mode"] = "zone"
         self.state["kb_on"] = True
         self.kb_switch.set_active(True)
@@ -394,11 +414,11 @@ class Window(Gtk.ApplicationWindow):
         save_state(self.state)
 
     def on_timeout_changed(self, dropdown, _pspec):
+        if not self._ready:
+            return
         self.state["backlight_timeout"] = dropdown.get_selected()
         apply_backlight_timeout(self.state)
         save_state(self.state)
-
-    # ---- Fan page ----
 
     def build_fan_page(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
@@ -414,22 +434,18 @@ class Window(Gtk.ApplicationWindow):
         box.append(Gtk.Label(label="CPU fan (0 = auto)", xalign=0))
         self.cpu_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1)
         self.cpu_scale.set_value(cpu_cur)
+        self.cpu_scale.connect("value-changed", self.on_fan_changed)
         box.append(self.cpu_scale)
 
         box.append(Gtk.Label(label="GPU fan (0 = auto)", xalign=0))
         self.gpu_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1)
         self.gpu_scale.set_value(gpu_cur)
+        self.gpu_scale.connect("value-changed", self.on_fan_changed)
         box.append(self.gpu_scale)
 
-        btn_row = Gtk.Box(spacing=8)
         auto_btn = Gtk.Button(label="Auto")
         auto_btn.connect("clicked", self.on_fan_auto)
-        btn_row.append(auto_btn)
-        apply_btn = Gtk.Button(label="Apply")
-        apply_btn.add_css_class("suggested-action")
-        apply_btn.connect("clicked", self.on_apply_fans)
-        btn_row.append(apply_btn)
-        box.append(btn_row)
+        box.append(auto_btn)
 
         note = Gtk.Label(
             label="Values are a target %, not RPM. 0 hands control back to firmware.", wrap=True)
@@ -437,16 +453,17 @@ class Window(Gtk.ApplicationWindow):
         box.append(note)
         return box
 
-    def on_fan_auto(self, _btn):
-        self.cpu_scale.set_value(0)
-        self.gpu_scale.set_value(0)
-        self.on_apply_fans(_btn)
-
-    def on_apply_fans(self, _btn):
+    def on_fan_changed(self, _scale):
+        if not self._ready:
+            return
         self.state["cpu_fan"] = int(self.cpu_scale.get_value())
         self.state["gpu_fan"] = int(self.gpu_scale.get_value())
         apply_fans(self.state)
         save_state(self.state)
+
+    def on_fan_auto(self, _btn):
+        self.cpu_scale.set_value(0)
+        self.gpu_scale.set_value(0)
 
 
 class App(Gtk.Application):
@@ -466,4 +483,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

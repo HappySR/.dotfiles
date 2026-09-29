@@ -52,7 +52,6 @@ let
   linuwu-sense-apply =
     pkgs.writers.writePython3 "linuwu-sense-apply"
       {
-        # Skip style-only checks (line length, blank lines); the script itself is fine.
         flakeIgnore = [
           "E501"
           "E302"
@@ -92,11 +91,17 @@ let
                 else:
                     e = state.get("effect", {})
                     r, g, b = e.get("color", [0, 150, 255])
-                    vals = [e.get("mode", 3), e.get("speed", 5),
-                            e.get("brightness", 100), e.get("direction", 1),
-                            r, g, b]
-                    write(f"{KB}/four_zone_mode",
-                          ",".join(str(v) for v in vals))
+                    mode = e.get("mode", 3)
+                    bright = e.get("brightness", 100)
+                    if mode == 0:
+                        hx = "{:02x}{:02x}{:02x}".format(r, g, b)
+                        write(f"{KB}/per_zone_mode",
+                              ",".join([hx] * 4) + "," + str(bright))
+                    else:
+                        vals = [mode, e.get("speed", 5), bright,
+                                e.get("direction", 1), r, g, b]
+                        write(f"{KB}/four_zone_mode",
+                              ",".join(str(v) for v in vals))
             except Exception:
                 pass
 
