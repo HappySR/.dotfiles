@@ -17,6 +17,7 @@ PRESETS = ["ff0000", "ff7f00", "ffff00", "00ff00", "00ffff",
 
 DEFAULT_STATE = {
     "kb_on": False,
+    "boot_dim": False,
     "active_mode": "effect",
     "effect": {"mode": 3, "speed": 5, "brightness": 100, "direction": 1, "color": [0, 150, 255]},
     "zone": {"colors": ["ff0000", "00ff00", "0000ff", "ffffff"], "brightness": 100},
@@ -32,7 +33,7 @@ def load_state():
         loaded = json.loads(STATE_FILE.read_text())
         merged["effect"].update(loaded.get("effect", {}))
         merged["zone"].update(loaded.get("zone", {}))
-        for k in ("kb_on", "active_mode", "backlight_timeout", "cpu_fan", "gpu_fan"):
+        for k in ("kb_on", "boot_dim", "active_mode", "backlight_timeout", "cpu_fan", "gpu_fan"):
             if k in loaded:
                 merged[k] = loaded[k]
         return merged
@@ -56,22 +57,25 @@ def read(path, default=""):
     except Exception:
         return default
 
-def apply_keyboard(state):
+def apply_keyboard(state, boot=False):
+    dim = boot and state.get("boot_dim", False)
     if not state["kb_on"]:
         write(f"{KB}/four_zone_mode", "0,0,0,1,0,0,0")
         return
     if state["active_mode"] == "zone":
         z = state["zone"]
-        write(f"{KB}/per_zone_mode", f"{','.join(z['colors'])},{z['brightness']}")
+        bright = 0 if dim else z["brightness"]
+        write(f"{KB}/per_zone_mode", f"{','.join(z['colors'])},{bright}")
         return
     e = state["effect"]
     r, g, b = e["color"]
-    if e["mode"] == 0:  # Static: one color on all four zones via per_zone_mode
+    bright = 0 if dim else e["brightness"]
+    if e["mode"] == 0:  # Static: use per_zone_mode with one color on all zones
         hx = "%02x%02x%02x" % (r, g, b)
-        write(f"{KB}/per_zone_mode", f"{hx},{hx},{hx},{hx},{e['brightness']}")
+        write(f"{KB}/per_zone_mode", f"{hx},{hx},{hx},{hx},{bright}")
     else:
         write(f"{KB}/four_zone_mode",
-              f"{e['mode']},{e['speed']},{e['brightness']},{e['direction']},{r},{g},{b}")
+              f"{e['mode']},{e['speed']},{bright},{e['direction']},{r},{g},{b}")
 
 def apply_backlight_timeout(state):
     write(f"{PS}/backlight_timeout", str(state["backlight_timeout"]))
@@ -82,7 +86,7 @@ def apply_fans(state):
 
 
 def apply_all(state):
-    apply_keyboard(state)
+    apply_keyboard(state, boot=True)
     try:
         apply_backlight_timeout(state)
     except Exception:
@@ -91,7 +95,6 @@ def apply_all(state):
         apply_fans(state)
     except Exception:
         pass
-
 
 def set_solid_bg(widget, name, hexcol, extra=""):
     """Force a flat background color onto a widget, bypassing theme gradients."""
@@ -262,6 +265,12 @@ class Window(Gtk.ApplicationWindow):
         self.kb_switch.connect("state-set", self.on_master_toggle)
         row.append(self.kb_switch)
         outer.append(row)
+        dim_row = Gtk.Box(spacing=8)
+        dim_row.append(Gtk.Label(label="Start at 0 brightness after restart", xalign=0, hexpand=True))
+        self.dim_switch = Gtk.Switch(active=self.state.get("boot_dim", False))
+        self.dim_switch.connect("state-set", self.on_dim_toggle)
+        dim_row.append(self.dim_switch)
+        outer.append(dim_row)
         outer.append(Gtk.Separator())
 
         sub = Gtk.Notebook()
@@ -360,6 +369,11 @@ class Window(Gtk.ApplicationWindow):
     def on_master_toggle(self, switch, active):
         self.state["kb_on"] = active
         apply_keyboard(self.state)
+        save_state(self.state)
+        return False
+
+    def on_dim_toggle(self, switch, active):
+        self.state["boot_dim"] = active
         save_state(self.state)
         return False
 

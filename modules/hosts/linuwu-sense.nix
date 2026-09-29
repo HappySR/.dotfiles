@@ -78,6 +78,8 @@ let
             except Exception:
                 state = {}
 
+            dim = state.get("boot_dim", False)
+
             try:
                 if not state.get("kb_on", False):
                     write(f"{KB}/four_zone_mode", "0,0,0,1,0,0,0")
@@ -85,14 +87,14 @@ let
                     z = state.get("zone", {})
                     colors = z.get(
                         "colors", ["ff0000", "00ff00", "0000ff", "ffffff"])
-                    brightness = z.get("brightness", 100)
+                    bright = 0 if dim else z.get("brightness", 100)
                     write(f"{KB}/per_zone_mode",
-                          ",".join(colors) + "," + str(brightness))
+                          ",".join(colors) + "," + str(bright))
                 else:
                     e = state.get("effect", {})
                     r, g, b = e.get("color", [0, 150, 255])
                     mode = e.get("mode", 3)
-                    bright = e.get("brightness", 100)
+                    bright = 0 if dim else e.get("brightness", 100)
                     if mode == 0:
                         hx = "{:02x}{:02x}{:02x}".format(r, g, b)
                         write(f"{KB}/per_zone_mode",
