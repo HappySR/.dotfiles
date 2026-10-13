@@ -93,6 +93,7 @@
   imports = [
     ./bat.nix
     ./direnv.nix
+    ./dolphin.nix
     ./eza.nix
     ./fish.nix
     ./flatpak.nix
@@ -108,6 +109,7 @@
     ./nushell.nix
     ./obs-studio.nix
     ./predator-control.nix
+    ./spicetify.nix
     ./starship.nix
     ./yazi.nix
     ./zoxide.nix

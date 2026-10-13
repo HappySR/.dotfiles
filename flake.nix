@@ -26,6 +26,10 @@
       url = "github:AvengeMedia/DankMaterialShell";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    spicetify-nix = {
+      url = "github:Gerg-L/spicetify-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     xwayland-satellite = {
       url = "github:Supreeeme/xwayland-satellite";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -40,9 +44,9 @@
       };
       pkgs = import inputs.nixpkgs {
         inherit system;
+        config.allowUnfree = true;
         overlays = [
           inputs.niri.overlays.niri
-          inputs.helix.overlays.default
           inputs.nur.overlays.default
           inputs.nix-alien.overlays.default
           overlay
@@ -64,6 +68,7 @@
       };
       homeConfigurations.subhajitroy = inputs.home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
+        extraSpecialArgs = { inherit inputs; };
         modules = [
           inputs.dms.homeModules.niri
           inputs.dms.homeModules.dank-material-shell

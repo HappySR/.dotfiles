@@ -12,6 +12,7 @@ in
     enable = true;
     defaultEditor = true;
     settings = {
+      theme = "catppuccin_mocha";
       editor = {
         bufferline = "multiple";
         color-modes = true;
@@ -22,7 +23,6 @@ in
         idle-timeout = 200;
         end-of-line-diagnostics = "hint";
         file-picker.hidden = false;
-        rainbow-brackets = true;
         statusline = {
           left = [
             "mode"

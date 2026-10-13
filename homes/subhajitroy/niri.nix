@@ -22,7 +22,6 @@ in
 
   home.packages = [
     pkgs.dsearch
-    pkgs.nautilus
     pkgs.pywal
     pkgs.pywalfox-native
     pkgs.xwayland-satellite

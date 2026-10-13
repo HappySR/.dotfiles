@@ -12,6 +12,7 @@
     ../../modules/hosts/graphics.nix
     ../../modules/hosts/podman.nix
     ../../modules/hosts/vm.nix
+    ../../modules/hosts/mysql.nix
     ../../modules/hosts/android.nix
     ../../modules/hosts/linuwu-sense.nix
   ];
@@ -98,6 +99,10 @@
   vm.enable = true;
   vm.kvm.enable = true;
   vm.waydroid.enable = true;
+
+  # Database stuff.
+  mysql.enable = true;
+  mysql.user = "subhajitroy";
 
   # Flatpak stuff.
   services.flatpak.enable = true;

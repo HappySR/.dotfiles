@@ -1,5 +1,8 @@
+[General]
+AccentColor={{colors.primary.default.red}},{{colors.primary.default.green}},{{colors.primary.default.blue}}
+
 [Icons]
-Theme=Papirus
+Theme=breeze-dark
 
 [UiSettings]
 ColorScheme=DankMatugen

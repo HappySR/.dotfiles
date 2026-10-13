@@ -10,7 +10,8 @@ include "dms/windowrules.kdl";
 environment {
   QT_QPA_PLATFORMTHEME "qt6ct"
   QT_QPA_PLATFORMTHEME_QT6 "qt6ct"
-  QT_ICON_THEME "Papirus"
+  QT_ICON_THEME "breeze-dark"
+  XDG_MENU_PREFIX "plasma-"
 }
 
 prefer-no-csd
@@ -126,7 +127,7 @@ binds {
     Mod+Shift+9 repeat=false hotkey-overlay-title="Move Column to Workspace 9" { move-column-to-workspace 9; }
 
     Mod+T repeat=false hotkey-overlay-title="Open Terminal" { spawn "ghostty" "--gtk-single-instance=true"; }
-    Mod+E repeat=false hotkey-overlay-title="Open Explorer" { spawn "nautilus";                             }
+    Mod+E repeat=false hotkey-overlay-title="Open Explorer" { spawn "dolphin";                              }
     Mod+B repeat=false hotkey-overlay-title="Open Browser"  { spawn "com.brave.Browser";                            }
 
     Print repeat=false hotkey-overlay-title="Take a Screenshot"                                    { spawn "dms" "screenshot";                   }
